@@ -9,7 +9,6 @@ class gameConsumer(WebsocketConsumer):
         try:
             self.room_id = self.scope['url_route']['kwargs']['room_id']
             self.room_group_id = 'game_%s' % self.room_id
-
             async_to_sync(self.channel_layer.group_add)(
                 self.room_group_id,
                 self.channel_name
@@ -108,7 +107,6 @@ class gameConsumer(WebsocketConsumer):
                 prob = []
                 for num in range(5):
                     prob.append(random.randint(0, 9))
-
                 self.send(text_data=json.dumps({
                     'room_group_id': self.room_group_id,
                     'game_round': game_round,
