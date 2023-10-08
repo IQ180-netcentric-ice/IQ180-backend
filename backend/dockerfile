@@ -9,7 +9,7 @@ COPY requirements.txt .
 RUN apk update && apk add --no-cache build-base python3-dev libffi-dev postgresql-client
 
 # Install Python dependencies
-# RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
 COPY . .
 
