@@ -1,19 +1,36 @@
+from django.utils import timezone
 from django.db import models
 
-# Create your models here.
-
-
 class User(models.Model):
-    user_id = models.IntegerField(primary_key=True, verbose_name='user_id')
-    name = models.CharField(max_length=100)
-    email = models.EmailField(max_length=100)
+    # id = models.BigAutoField(primary_key=True, auto_created=True)
+    username = models.CharField(max_length=255,blank=True, null=True)
+    password = models.SmallIntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now,blank=True, null=True)
 
-    def __str__(self):
-        return self.name
+class ProfilePic(models.Model):
+    # pic_id = models.BigAutoField(primary_key=True, auto_created=True)
+    url = models.CharField(max_length=255,blank=True, null=True)
 
+class UserDetail(models.Model):
+    # id = models.BigAutoField(primary_key=True, auto_created=True)
+    name = models.CharField(max_length=255,blank=True, null=True)
+    email = models.CharField(max_length=255,blank=True, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE,blank=True, null=True)
+    pic = models.ForeignKey(ProfilePic, on_delete=models.CASCADE,blank=True, null=True)
 
-class Detail(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    address = models.CharField(max_length=100)
-    phone = models.CharField(max_length=100)
+class RoundStat(models.Model):
+    # round_id = models.SmallIntegerField(primary_key=True, auto_created=True)
+    time_length = models.SmallIntegerField(blank=True, null=True)
+    answer = models.CharField(max_length=255,blank=True, null=True)
+    result = models.CharField(max_length=255,blank=True, null=True)
+    evaluate = models.CharField(max_length=255,blank=True, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE,blank=True, null=True)
 
+class GameStat(models.Model):
+    # game_id = models.BigAutoField(primary_key=True, auto_created=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
+    round = models.ForeignKey(RoundStat, on_delete=models.CASCADE, blank=True, null=True)
+    point = models.SmallIntegerField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ('user', 'round')

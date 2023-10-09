@@ -1,7 +1,7 @@
 import os
-from dotenv import load_dotenv
-dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
-load_dotenv(dotenv_path)
+# from dotenv import load_dotenv
+# dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+# load_dotenv(dotenv_path)
 
 from pathlib import Path
 
@@ -76,11 +76,11 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        # 'NAME': 'test_db',
+        # 'NAME': os.getenv('DB_NAME'),
+        'NAME': 'test_db',
         'USER': 'root',
         'PASSWORD': 'root',
-        'HOST': '127.0.0.1',
+        'HOST': '0.0.0.0',
         'PORT': '5432',
     }
 }
@@ -127,13 +127,13 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-ASGI_APPLICATION = 'core.routing.application'
+# ASGI_APPLICATION = 'core.routing.application'
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [('redis', 6379)],  # Use 'redis' as the host
-        },
-    },
-}
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             'hosts': [('127.0.0.1', 6379)],  # Use 'redis' as the host
+#         },
+#     },
+# }
