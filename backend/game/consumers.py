@@ -5,11 +5,6 @@ import random
 import math
 import redis
 import uuid
-import sys
-import os
-import sys
-import os
-
 from .numberSolver import Solve, OneFromTheTop, OneOfTheOthers
 
 
