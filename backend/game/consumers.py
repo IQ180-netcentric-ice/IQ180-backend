@@ -5,6 +5,14 @@ import random
 import math
 import redis
 import uuid
+import sys
+import os
+import sys
+import os
+
+from .numberSolver import Solve, OneFromTheTop, OneOfTheOthers
+
+
 
 redis_client = redis.Redis(host="localhost", port=6379, db=0)
 # redis_client = redis.Redis(host="redis", port=6379, db=0)
@@ -136,6 +144,8 @@ class gameConsumer(WebsocketConsumer):
                 self.receive_game_data(text_data_json)
             elif message_type == 'game_problem':
                 self.receive_game_problem(text_data_json)
+            elif message_type == 'ready_status':
+                self.receive_ready_status(text_data_json)
             elif message_type == 'game_answer':
                 self.receive_game_answer(text_data_json)
             elif message_type == 'create_room':
@@ -183,6 +193,30 @@ class gameConsumer(WebsocketConsumer):
             self.set_player_role('guest')
         except:
             pass
+
+    def receive_ready_status(self, text_data):
+        try:
+            text_data_json = text_data
+            if 'player_status' in text_data_json:
+                room_id = text_data_json['room_id']
+                player_status = text_data_json['player_status']
+
+                async_to_sync(self.channel_layer.group_send)(
+                    self.room_group_id,
+                    {
+                        'type': 'ready_status',
+                        'room_id': room_id,
+                        'player_status': player_status
+                    }
+                )
+            else:
+                raise ValueError("'player_status' not found in JSON")
+        except json.JSONDecodeError as json_error:
+            print(f"JSON decoding error: {json_error}")
+        except KeyError as key_error:
+            print(f"Key error: {key_error}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
 
     def receive_game_data(self, text_data):
         try:
@@ -303,6 +337,20 @@ class gameConsumer(WebsocketConsumer):
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
+    def ready_status(self, event):
+        try:
+            if 'player_status' in event:
+                room_id = event['room_id']
+                player_status = event['player_status']
+                self.send(text_data=json.dumps({
+                    'type': 'player_status',
+                    'player_status': player_status
+                }))
+            else:
+                raise ValueError("'player_data' not found in event")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
     def game_data(self, event):
         try:
             if 'player_data' in event:
@@ -327,17 +375,23 @@ class gameConsumer(WebsocketConsumer):
             if 'curr_round' in event:
                 curr_round = event['curr_round']
                 room_id = event['room_id']
-                prob = []
-                for num in range(5):
-                    prob.append(random.randint(0, 9))
+                
+                while True:
+                    target = random.randint(100, 200)
+                    numbers = [OneFromTheTop()] + [OneOfTheOthers() for i in range(4)]
+                    solution = Solve(target, numbers)
+                
+                    if solution is not None:
+                        break
                 self.send(text_data=json.dumps({
                     'type': 'game_problem',
                     'room_id': room_id,
                     'curr_round': curr_round,
-                    'problem': prob,
+                    'problem': numbers, 
+                    'solution': solution
                 }))
             else:
-                raise ValueError("'game_round' not found in event")
+                raise ValueError("'curr_round' not found in event")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
