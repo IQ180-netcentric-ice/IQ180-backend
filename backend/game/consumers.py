@@ -6,8 +6,8 @@ import math
 import redis
 import uuid
 
-# redis_client = redis.Redis(host="localhost", port=6379, db=0)
-redis_client = redis.Redis(host="redis", port=6379, db=0)
+redis_client = redis.Redis(host="localhost", port=6379, db=0)
+# redis_client = redis.Redis(host="redis", port=6379, db=0)
 
 
 class gameConsumer(WebsocketConsumer):
@@ -37,7 +37,7 @@ class gameConsumer(WebsocketConsumer):
     def disconnect(self, close_code):
         try:
             print(f'{self.username} disconnect')
-            self.sendonlinestatus(False,self.username)
+            self.sendonlinestatus(False, self.username)
             async_to_sync(self.channel_layer.group_discard)(
                 self.room_group_id,
                 self.channel_name,
@@ -45,33 +45,30 @@ class gameConsumer(WebsocketConsumer):
         except Exception as e:
             print(f"An unexpected error occurred during disconnect: {e}")
 
-
-    def sendonlinestatus(self, boolean,username):
+    def sendonlinestatus(self, boolean, username):
         async_to_sync(self.channel_layer.group_send)(
-                self.room_group_id,
-                {
-                    'type': 'sendonlinestatus2',
-                    'Online': boolean,
-                    'username': username
-                }
-            )
-        
-    def sendonlinestatus2(self, event):
-            Online = event['Online']
-            Username = event['username']
-            self.send(text_data=json.dumps({
-                 'Online': Online ,
-                 'Username': Username
-            }))
+            self.room_group_id,
+            {
+                'type': 'sendonlinestatus2',
+                'Online': boolean,
+                'username': username
+            }
+        )
 
-    
+    def sendonlinestatus2(self, event):
+        Online = event['Online']
+        Username = event['username']
+        self.send(text_data=json.dumps({
+            'Online': Online,
+            'Username': Username
+        }))
+
     def gen_uuid(self, username):
         namespace = uuid.UUID('d3f9b041-3a92-4450-b7ea-85a76ae6fe14')
         return uuid.uuid5(namespace, username)
 
     def remove_player(self):
         try:
-            # redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
             redis_key = f'players:{self.room_id}'
             uuid_to_remove = self.player_id
             players = redis_client.lrange(redis_key, 0, -1)
@@ -97,20 +94,20 @@ class gameConsumer(WebsocketConsumer):
                 player_uuid = player_data.get('uuid')
                 if player_data['username'] == username:
                     self.remove_player()
-                    self.player_id=player_data['uuid']
-                    player_uuid=self.player_id
-                    self.sendonlinestatus(True,username)
+                    self.player_id = player_data['uuid']
+                    player_uuid = self.player_id
+                    self.sendonlinestatus(True, username)
                     print(f'Reconnecting for {username}')
                     break
                 elif player_uuid == None:
                     player_data['username'] = username
-                    player_data['uuid']= str(self.gen_uuid(username))
-                    self.player_id=player_data['uuid']
+                    player_data['uuid'] = str(self.gen_uuid(username))
+                    self.player_id = player_data['uuid']
                     redis_client.lset(self.redis_key, players.index(
                         player), json.dumps(player_data))
                     print(
                         f'Updated username for UUID {self.player_id} to {username}')
-                    self.sendonlinestatus(True, username)                    
+                    self.sendonlinestatus(True, username)
         except Exception as e:
             print(f"An unexpected error occurred during username update: {e}")
 
@@ -146,7 +143,7 @@ class gameConsumer(WebsocketConsumer):
             elif message_type == 'join_room':
                 self.receive_join_room(text_data_json)
             elif message_type == 'quit':
-                self.sendonlinestatus(False,self.username)
+                self.sendonlinestatus(False, self.username)
                 self.remove_player()
             else:
                 print(f"Received unsupported message type: {message_type}")
@@ -157,7 +154,7 @@ class gameConsumer(WebsocketConsumer):
         try:
             text_data_json = text_data
             username = text_data_json['username']
-            self.username=username
+            self.username = username
             async_to_sync(self.channel_layer.group_send)(
                 self.room_group_id,
                 {
@@ -174,7 +171,7 @@ class gameConsumer(WebsocketConsumer):
         try:
             text_data_json = text_data
             username = text_data_json['username']
-            self.username=username
+            self.username = username
             async_to_sync(self.channel_layer.group_send)(
                 self.room_group_id,
                 {
@@ -219,7 +216,7 @@ class gameConsumer(WebsocketConsumer):
     def receive_game_problem(self, text_data):
         try:
             text_data_json = text_data
-            if 'game_round' in text_data_json:
+            if 'curr_round' in text_data_json:
                 room_id = text_data_json['room_id']
                 curr_round = text_data_json['curr_round']
 
@@ -243,7 +240,7 @@ class gameConsumer(WebsocketConsumer):
     def receive_game_answer(self, text_data):
         try:
             text_data_json = text_data
-            if 'game_round' in text_data_json:
+            if 'curr_round' in text_data_json:
                 room_id = text_data_json['room_id']
                 curr_round = text_data_json['curr_round']
                 problem = text_data_json['problem']
@@ -314,12 +311,12 @@ class gameConsumer(WebsocketConsumer):
                 time_duration = event['time_duration']
                 player_data = event['player_data']
                 self.send(text_data=json.dumps({
-                        'type': 'game_data',
-                        'room_id': room_id,
-                        'curr_round': curr_round,
-                        'time_duration': time_duration,
-                        'player_data': player_data,
-                    }))
+                    'type': 'game_data',
+                    'room_id': room_id,
+                    'curr_round': curr_round,
+                    'time_duration': time_duration,
+                    'player_data': player_data,
+                }))
             else:
                 raise ValueError("'player_data' not found in event")
         except Exception as e:
@@ -357,24 +354,33 @@ class gameConsumer(WebsocketConsumer):
 
     def game_answer(self, event):
         try:
-            if 'curr_round' in event:
-                room_id = event['room_id']
-                curr_round = event['curr_round']
-            if 'problem' in event:
-                problem = event['problem']
             if 'player_answer' in event:
                 player_answer = event['player_answer']
-                winner = self.evaluate_winner_round(
-                    player_answer['player1']['answer'], player_answer['player2']['answer'], problem)
-                print(winner)
-                self.send(text_data=json.dumps({
-                    'type': 'game_answer',
-                    'room_id': room_id,
-                    'curr_round': curr_round,
-                    'problem': problem,
-                    'winner': player_answer[winner]['uuid'],
-                    'player_answer': player_answer['player1']['answer']
-                }))
+                room_id = event['room_id']
+                curr_round = event['curr_round']
+                problem = event['problem']
+                if player_answer['player1']['answer'] != "" and player_answer['player2']['answer'] != "":
+                    print(player_answer['player2']['answer'] == "")
+                    winner = self.evaluate_winner_round(
+                        player_answer['player1']['answer'], player_answer['player2']['answer'], problem)
+                    print(winner)
+                    self.send(text_data=json.dumps({
+                        'type': 'game_answer',
+                        'room_id': room_id,
+                        'curr_round': curr_round,
+                        'problem': problem,
+                        'winner': player_answer[winner]['uuid'],
+                        'player_answer': player_answer[winner]['answer']
+                    }))
+                else:
+                    self.send(text_data=json.dumps({
+                        'type': 'game_answer',
+                        'room_id': room_id,
+                        'curr_round': curr_round,
+                        'problem': problem,
+                        'player_answer': player_answer
+                    }))
+                    raise ValueError("Need to submit one more answer")
             else:
                 raise ValueError("'game_round' not found in event")
         except Exception as e:
