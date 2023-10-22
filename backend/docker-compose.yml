@@ -41,8 +41,9 @@ services:
     networks:
       - eiei
     command: >
-      sh -c "apk add --no-cache npm &&
-      daphne core.asgi:application -b 0.0.0.0 -p 8000"
+      sh -c "apk add --no-cache npm && 
+          daphne core.asgi:application -b 0.0.0.0 -p 8000 && 
+          gunicorn core.wsgi:application -b 0.0.0.0:8080"
     depends_on:
       - redis
 
