@@ -30,22 +30,22 @@ services:
   #   networks:
   #     - eiei
 
-  iq180_backend:
-    container_name: iq180_backend
-    restart: on-failure
-    build: 
-      context: .
-      dockerfile: ./Dockerfile
-    ports:
-      - 8000:8000
-    networks:
-      - eiei
-    command: >
-      sh -c "apk add --no-cache npm && 
-          daphne core.asgi:application -b 0.0.0.0 -p 8000 && 
-          gunicorn core.wsgi:application -b 0.0.0.0:8080"
-    depends_on:
-      - redis
+  # iq180_backend:
+  #   container_name: iq180_backend
+  #   restart: on-failure
+  #   build: 
+  #     context: .
+  #     dockerfile: ./Dockerfile
+  #   ports:
+  #     - 8000:8000
+  #   networks:
+  #     - eiei
+  #   command: >
+  #     sh -c "apk add --no-cache npm && 
+  #         daphne core.asgi:application -b 0.0.0.0 -p 8000 && 
+  #         gunicorn core.wsgi:application -b 0.0.0.0:8080"
+  #   depends_on:
+  #     - redis
 
   redis:
     container_name: redis

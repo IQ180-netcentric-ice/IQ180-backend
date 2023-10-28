@@ -9,8 +9,8 @@ from .numberSolver import Solve, OneFromTheTop, OneOfTheOthers
 
 
 
-# redis_client = redis.Redis(host="localhost", port=6379, db=0)
-redis_client = redis.Redis(host="redis", port=6379, db=0)
+redis_client = redis.Redis(host="localhost", port=6379, db=0)
+# redis_client = redis.Redis(host="redis", port=6379, db=0)
 
 
 class gameConsumer(WebsocketConsumer):
@@ -59,11 +59,17 @@ class gameConsumer(WebsocketConsumer):
         )
 
     def sendonlinestatus2(self, event):
-        Online = event['Online']
-        Username = event['username']
+        # Online = event['Online']
+        # Username = event['username']
+        redis_key = f'players:{self.room_id}'
+        players = redis_client.lrange(redis_key, 0, -1)
+        usernames = [json.loads(player.decode('utf-8'))['username'] for player in players]
+
+        # Send the number of current users and the list of usernames
+        num_users = len(usernames)
         self.send(text_data=json.dumps({
-            'Online': Online,
-            'Username': Username
+            'number_users': num_users,
+            'users': usernames
         }))
 
     def gen_uuid(self, username):
@@ -167,6 +173,7 @@ class gameConsumer(WebsocketConsumer):
                     'username': username
                 }
             )
+            self.sendonlinestatus(True, username)
             self.update_player_username(username)
             self.set_player_role('host')
         except:
@@ -184,6 +191,7 @@ class gameConsumer(WebsocketConsumer):
                     'username': username,
                 }
             )
+            self.sendonlinestatus(True, username)
             self.update_player_username(username)
             self.set_player_role('guest')
         except:
@@ -382,8 +390,9 @@ class gameConsumer(WebsocketConsumer):
                     'type': 'game_problem',
                     'room_id': room_id,
                     'curr_round': curr_round,
+                    'target': target,
                     'problem': numbers, 
-                    'solution': solution
+                    'solution': solution,
                 }))
             else:
                 raise ValueError("'curr_round' not found in event")
