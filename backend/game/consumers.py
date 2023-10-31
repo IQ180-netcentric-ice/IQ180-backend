@@ -8,7 +8,6 @@ import uuid
 from .numberSolver import Solve, OneFromTheTop, OneOfTheOthers
 
 
-
 # redis_client = redis.Redis(host="localhost", port=6379, db=0)
 redis_client = redis.Redis(host="redis", port=6379, db=0)
 
@@ -63,14 +62,14 @@ class gameConsumer(WebsocketConsumer):
         # Username = event['username']
         redis_key = f'players:{self.room_id}'
         players = redis_client.lrange(redis_key, 0, -1)
-        usernames = [json.loads(player.decode('utf-8'))['username'] for player in players]
-
-        # Send the number of current users and the list of usernames
+        usernames = [json.loads(player.decode('utf-8'))['username']
+                     for player in players]
+        
         num_users = len(usernames)
-        self.send(text_data=json.dumps({
-            'number_users': num_users,
-            'users': usernames
-        }))
+        # self.send(text_data=json.dumps({
+        #     'number_users': num_users,
+        #     'users': usernames
+        # }))
 
     def gen_uuid(self, username):
         namespace = uuid.UUID('d3f9b041-3a92-4450-b7ea-85a76ae6fe14')
@@ -105,7 +104,7 @@ class gameConsumer(WebsocketConsumer):
                     self.remove_player()
                     self.player_id = player_data['uuid']
                     player_uuid = self.player_id
-                    self.sendonlinestatus(True, username)
+                    # self.sendonlinestatus(True, username)
                     print(f'Reconnecting for {username}')
                     break
                 elif player_uuid == None:
@@ -116,7 +115,7 @@ class gameConsumer(WebsocketConsumer):
                         player), json.dumps(player_data))
                     print(
                         f'Updated username for UUID {self.player_id} to {username}')
-                    self.sendonlinestatus(True, username)
+                    # self.sendonlinestatus(True, username)
         except Exception as e:
             print(f"An unexpected error occurred during username update: {e}")
 
@@ -145,6 +144,8 @@ class gameConsumer(WebsocketConsumer):
                 self.receive_game_data(text_data_json)
             elif message_type == 'game_problem':
                 self.receive_game_problem(text_data_json)
+            elif message_type == 'online_status':
+                self.receive_online_status(text_data_json)
             elif message_type == 'ready_status':
                 self.receive_ready_status(text_data_json)
             elif message_type == 'game_answer':
@@ -173,7 +174,7 @@ class gameConsumer(WebsocketConsumer):
                     'username': username
                 }
             )
-            self.sendonlinestatus(True, username)
+            # self.sendonlinestatus(True, username)
             self.update_player_username(username)
             self.set_player_role('host')
         except:
@@ -191,7 +192,7 @@ class gameConsumer(WebsocketConsumer):
                     'username': username,
                 }
             )
-            self.sendonlinestatus(True, username)
+            # self.sendonlinestatus(True, username)
             self.update_player_username(username)
             self.set_player_role('guest')
         except:
@@ -214,6 +215,28 @@ class gameConsumer(WebsocketConsumer):
                 )
             else:
                 raise ValueError("'player_status' not found in JSON")
+        except json.JSONDecodeError as json_error:
+            print(f"JSON decoding error: {json_error}")
+        except KeyError as key_error:
+            print(f"Key error: {key_error}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
+    def receive_online_status(self, text_data):
+        try:
+            text_data_json = text_data
+            if 'room_id' in text_data_json:
+                room_id = text_data_json['room_id']
+
+                async_to_sync(self.channel_layer.group_send)(
+                    self.room_group_id,
+                    {
+                        'type': 'online_status',
+                        'room_id': room_id,
+                    }
+                )
+            else:
+                raise ValueError("'room_id' not found in JSON")
         except json.JSONDecodeError as json_error:
             print(f"JSON decoding error: {json_error}")
         except KeyError as key_error:
@@ -353,6 +376,32 @@ class gameConsumer(WebsocketConsumer):
                 raise ValueError("'player_data' not found in event")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
+            
+    def online_status(self, event):
+        try:
+            if 'room_id' in event:
+                room_id = event['room_id']
+                 # Username = event['username']
+                redis_key = f'players:{self.room_id}'
+                players = redis_client.lrange(redis_key, 0, -1)
+                usernames = [json.loads(player.decode('utf-8'))['username']
+                 for player in players if json.loads(player.decode('utf-8'))['username']]
+
+        
+                num_users = len(usernames)
+                print(usernames)
+                print(num_users)
+                
+                self.send(text_data=json.dumps({
+                    'type': 'player_status',
+                    'room_id': room_id,
+                    'number_of_users': num_users,
+                    'players': usernames
+                }))
+            else:
+                raise ValueError("'player_data' not found in event")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
 
     def game_data(self, event):
         try:
@@ -378,12 +427,13 @@ class gameConsumer(WebsocketConsumer):
             if 'curr_round' in event:
                 curr_round = event['curr_round']
                 room_id = event['room_id']
-                
+
                 while True:
                     target = random.randint(100, 200)
-                    numbers = [OneFromTheTop()] + [OneOfTheOthers() for i in range(4)]
+                    numbers = [OneFromTheTop()] + [OneOfTheOthers()
+                                                   for i in range(4)]
                     solution = Solve(target, numbers)
-                
+
                     if solution is not None:
                         break
                 self.send(text_data=json.dumps({
@@ -391,7 +441,7 @@ class gameConsumer(WebsocketConsumer):
                     'room_id': room_id,
                     'curr_round': curr_round,
                     'target': target,
-                    'problem': numbers, 
+                    'problem': numbers,
                     'solution': solution,
                 }))
             else:
