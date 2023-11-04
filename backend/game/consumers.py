@@ -145,6 +145,8 @@ class gameConsumer(WebsocketConsumer):
                 self.receive_game_data(text_data_json)
             elif message_type == 'game_problem':
                 self.receive_game_problem(text_data_json)
+            elif message_type == 'hard_problem':
+                self.receive_hard_problem(text_data_json)
             elif message_type == 'online_status':
                 self.receive_online_status(text_data_json)
             elif message_type == 'ready_status':
@@ -282,6 +284,30 @@ class gameConsumer(WebsocketConsumer):
                 )
             else:
                 raise ValueError("'player_data' not found in JSON")
+        except json.JSONDecodeError as json_error:
+            print(f"JSON decoding error: {json_error}")
+        except KeyError as key_error:
+            print(f"Key error: {key_error}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
+    def receive_hard_problem(self, text_data):
+        try:
+            text_data_json = text_data
+            if 'curr_round' in text_data_json:
+                room_id = self.room_id
+                curr_round = text_data_json['curr_round']
+
+                async_to_sync(self.channel_layer.group_send)(
+                    self.room_group_id,
+                    {
+                        'type': 'hard_problem',
+                        'room_id': room_id,
+                        'curr_round': curr_round,
+                    }
+                )
+            else:
+                raise ValueError("'game_round' not found in JSON")
         except json.JSONDecodeError as json_error:
             print(f"JSON decoding error: {json_error}")
         except KeyError as key_error:
@@ -481,10 +507,17 @@ class gameConsumer(WebsocketConsumer):
                     numbers = [OneFromTheTop()] + [OneOfTheOthers()
                                                    for i in range(4)]
                     solution = Solve(target, numbers)
+                    while solution and len(solution.split()) < 8:
+                        target = random.randint(100, 200)
+                        numbers = [OneFromTheTop()] + [OneOfTheOthers()
+                                                       for i in range(4)]
+                        print(len(solution.split()))
+                        print(solution)
+                        solution = Solve(target, numbers)
                     if solution is not None:
                         break
-                    
-                print(str(solution))
+
+                # print(str(solution))
                 hint = self.extract_hint(str(solution))
 
                 self.send(text_data=json.dumps({
@@ -501,13 +534,52 @@ class gameConsumer(WebsocketConsumer):
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
-    def evaluate_winner_round(self, ans1, ans2, prob):
+    def hard_problem(self, event):
+        try:
+            if 'curr_round' in event:
+                curr_round = event['curr_round']
+                room_id = event['room_id']
+
+                while True:
+                    target = random.randint(1000, 1500)
+                    numbers = [OneFromTheTop()] + [OneOfTheOthers()
+                                                   for i in range(5)]
+                    solution = Solve(target, numbers)
+                    if solution is not None:
+                        break
+
+                print(str(solution))
+                hint = self.extract_hint(str(solution))
+
+                self.send(text_data=json.dumps({
+                    'type': 'hard_problem',
+                    'room_id': room_id,
+                    'curr_round': curr_round,
+                    'target': target,
+                    'problem': numbers,
+                    'solution': solution,
+                    'hint': hint
+                }))
+            else:
+                raise ValueError("'curr_round' not found in event")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
+    def evaluate_winner_round(self, ans1, ans2, prob, time1, time2):
         ans1 = int(ans1)
         ans2 = int(ans2)
         prob = int(prob)
-        if math.fabs(ans1-prob) < math.fabs(ans2-prob):
+
+        if ans1 == prob and ans2 == prob:
+            if time1 < time2:
+                return 'player1'
+            elif time1 > time2:
+                return 'player2'
+            else:
+                return 'tied'
+        elif ans1 == prob:
             return 'player1'
-        elif math.fabs(ans1-prob) > math.fabs(ans2-prob):
+        elif ans2 == prob:
             return 'player2'
         else:
             return 'tied'
@@ -519,19 +591,31 @@ class gameConsumer(WebsocketConsumer):
                 room_id = event['room_id']
                 curr_round = event['curr_round']
                 problem = event['problem']
+                time1 = player_answer['player1']['time']
+                time2 = player_answer['player2']['time']
+
                 if player_answer['player1']['answer'] != "" and player_answer['player2']['answer'] != "":
-                    print(player_answer['player2']['answer'] == "")
                     winner = self.evaluate_winner_round(
-                        player_answer['player1']['answer'], player_answer['player2']['answer'], problem)
-                    print(winner)
-                    self.send(text_data=json.dumps({
-                        'type': 'game_answer',
-                        'room_id': room_id,
-                        'curr_round': curr_round,
-                        'problem': problem,
-                        'winner': player_answer[winner]['username'],
-                        'player_answer': player_answer[winner]['answer']
-                    }))
+                        player_answer['player1']['answer'], player_answer['player2']['answer'], problem, time1, time2)
+
+                    if winner == 'tied':
+                        self.send(text_data=json.dumps({
+                            'type': 'game_answer',
+                            'room_id': room_id,
+                            'curr_round': curr_round,
+                            'problem': problem,
+                            'winner': 'tied',
+                            'player_answer': 'tied'
+                        }))
+                    else:
+                        self.send(text_data=json.dumps({
+                            'type': 'game_answer',
+                            'room_id': room_id,
+                            'curr_round': curr_round,
+                            'problem': problem,
+                            'winner': player_answer[winner]['username'],
+                            'player_answer': player_answer[winner]['answer']
+                        }))
                 else:
                     self.send(text_data=json.dumps({
                         'type': 'game_answer',
@@ -540,8 +624,8 @@ class gameConsumer(WebsocketConsumer):
                         'problem': problem,
                         'player_answer': player_answer
                     }))
-                    raise ValueError("Need to submit one more answer")
+                raise ValueError("Need to submit one more answer")
             else:
-                raise ValueError("'game_round' not found in event")
+                raise ValueError("'player_answer' not found in event")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")

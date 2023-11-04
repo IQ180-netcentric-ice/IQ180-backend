@@ -1,3 +1,5 @@
+from .serializers import UserSerializer, ReviewSerializer
+from base.models import User, Review
 import json
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
@@ -11,8 +13,6 @@ redis_client = redis.Redis(host="redis", port=6379, db=0)
 # redis_client = redis.Redis(host="localhost", port=6379, db=0)
 
 
-# from base.models import User, Detail
-# from .serializers import UserSerializer, DetailSerializer
 # from asgiref.sync import sync_to_async
 # from adrf.decorators import api_view
 # from django.db import transaction
@@ -25,17 +25,29 @@ redis_client = redis.Redis(host="redis", port=6379, db=0)
 #     return Response(serializer.data)
 
 
-# @api_view(['POST'])
-# def postData(request):
-#     serializer = UserSerializer(data=request.data)
-#     if serializer.is_valid():
-#         serializer.save()
-#     return Response(serializer.data)
+@api_view(['POST'])
+def addReview(request):
+    username = request.data.get('username')
+    review = request.data.get('review')
+    star = request.data.get('star')
+    serializer = ReviewSerializer(data=request.data)
+    if serializer.is_valid():
+        user, created = User.objects.get_or_create(username=username)
+
+        response_data = {
+            'username': username,
+            'review': review,
+            'star': star,
+            'message': 'Create review success'
+        }
+        serializer.save(user=user)
+        return Response(response_data,status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 def create_room(request):
     data = request.data
-    
 
     length = 6
     characters = string.ascii_letters + string.digits
@@ -56,9 +68,9 @@ def create_room(request):
         'message': f'Create room {room_id} success!'
     }
     player_data = {
-                'role': 'Host',
+        'role': 'Host',
                 'username': username,
-            }
+    }
 
     redis_key = f'players:{room_id}'
     redis_client.rpush(redis_key, json.dumps(room_data))
@@ -92,11 +104,11 @@ def join_room(request):
             num_round = player['numRound']
         if 'time' in player:
             room_time = player['time']
-    
+
     player_data = {
-                'role': 'Guest',
+        'role': 'Guest',
                 'username': username,
-            }
+    }
 
     response_data = {
         'username': username,
@@ -106,6 +118,5 @@ def join_room(request):
         'message': f'Join room {room_id} success!'
     }
     redis_client.rpush(redis_key, json.dumps(player_data))
-    
 
     return Response(response_data, status=status.HTTP_200_OK)

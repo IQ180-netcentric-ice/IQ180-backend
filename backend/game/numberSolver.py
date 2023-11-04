@@ -50,7 +50,6 @@ def Solve(target, numbers):
                     stack.pop()
 
             stack.pop()
-
     return Recurse([], numbers)
 
 if __name__ == "__main__":
