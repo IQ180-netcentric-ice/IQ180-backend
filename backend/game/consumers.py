@@ -76,65 +76,65 @@ class gameConsumer(WebsocketConsumer):
         namespace = uuid.UUID('d3f9b041-3a92-4450-b7ea-85a76ae6fe14')
         return uuid.uuid5(namespace, username)
 
-    def remove_player(self):
-        try:
-            redis_key = f'players:{self.room_id}'
-            uuid_to_remove = self.player_id
-            players = redis_client.lrange(redis_key, 0, -1)
+    # def remove_player(self):
+    #     try:
+    #         redis_key = f'players:{self.room_id}'
+    #         uuid_to_remove = self.player_id
+    #         players = redis_client.lrange(redis_key, 0, -1)
 
-            for player in players:
-                player_data = json.loads(player.decode('utf-8'))
-                player_uuid = player_data.get('uuid')
-                if player_uuid == uuid_to_remove:
-                    redis_client.lrem(redis_key, 0, player)
-                    print(f'Removed UUID: {uuid_to_remove}')
+    #         for player in players:
+    #             player_data = json.loads(player.decode('utf-8'))
+    #             player_uuid = player_data.get('uuid')
+    #             if player_uuid == uuid_to_remove:
+    #                 redis_client.lrem(redis_key, 0, player)
+    #                 print(f'Removed UUID: {uuid_to_remove}')
 
-            updated_players = redis_client.lrange(redis_key, 0, -1)
-            for updated_player in updated_players:
-                print(updated_player.decode('utf-8'))
-        except Exception as e:
-            print(f"An unexpected error occurred during player removal: {e}")
+    #         updated_players = redis_client.lrange(redis_key, 0, -1)
+    #         for updated_player in updated_players:
+    #             print(updated_player.decode('utf-8'))
+    #     except Exception as e:
+    #         print(f"An unexpected error occurred during player removal: {e}")
 
-    def update_player_username(self, username):
-        try:
-            players = redis_client.lrange(self.redis_key, 0, -1)
-            for player in players:
-                player_data = json.loads(player.decode('utf-8'))
-                player_uuid = player_data.get('uuid')
-                if player_data['username'] == username:
-                    self.remove_player()
-                    self.player_id = player_data['uuid']
-                    player_uuid = self.player_id
-                    # self.sendonlinestatus(True, username)
-                    print(f'Reconnecting for {username}')
-                    break
-                elif player_uuid == None:
-                    player_data['username'] = username
-                    player_data['uuid'] = str(self.gen_uuid(username))
-                    self.player_id = player_data['uuid']
-                    redis_client.lset(self.redis_key, players.index(
-                        player), json.dumps(player_data))
-                    print(
-                        f'Updated username for UUID {self.player_id} to {username}')
-                    # self.sendonlinestatus(True, username)
-        except Exception as e:
-            print(f"An unexpected error occurred during username update: {e}")
+    # def update_player_username(self, username):
+    #     try:
+    #         players = redis_client.lrange(self.redis_key, 0, -1)
+    #         for player in players:
+    #             player_data = json.loads(player.decode('utf-8'))
+    #             player_uuid = player_data.get('uuid')
+    #             if player_data['username'] == username:
+    #                 self.remove_player()
+    #                 self.player_id = player_data['uuid']
+    #                 player_uuid = self.player_id
+    #                 # self.sendonlinestatus(True, username)
+    #                 print(f'Reconnecting for {username}')
+    #                 break
+    #             elif player_uuid == None:
+    #                 player_data['username'] = username
+    #                 player_data['uuid'] = str(self.gen_uuid(username))
+    #                 self.player_id = player_data['uuid']
+    #                 redis_client.lset(self.redis_key, players.index(
+    #                     player), json.dumps(player_data))
+    #                 print(
+    #                     f'Updated username for UUID {self.player_id} to {username}')
+    #                 # self.sendonlinestatus(True, username)
+    #     except Exception as e:
+    #         print(f"An unexpected error occurred during username update: {e}")
 
-    def set_player_role(self, role):
-        try:
-            redis_key = f'players:{self.room_id}'
-            players = redis_client.lrange(redis_key, 0, -1)
-            for player in players:
-                player_data = json.loads(player.decode('utf-8'))
-                player_uuid = player_data.get('uuid')
-                if player_uuid == self.player_id:
-                    player_data['role'] = role
-                    redis_client.lset(redis_key, players.index(
-                        player), json.dumps(player_data))
-                    print(f'Set role to {role} for UUID: {self.player_id}')
-                    break
-        except Exception as e:
-            print(f"An unexpected error occurred during role update: {e}")
+    # def set_player_role(self, role):
+    #     try:
+    #         redis_key = f'players:{self.room_id}'
+    #         players = redis_client.lrange(redis_key, 0, -1)
+    #         for player in players:
+    #             player_data = json.loads(player.decode('utf-8'))
+    #             player_uuid = player_data.get('uuid')
+    #             if player_uuid == self.player_id:
+    #                 player_data['role'] = role
+    #                 redis_client.lset(redis_key, players.index(
+    #                     player), json.dumps(player_data))
+    #                 print(f'Set role to {role} for UUID: {self.player_id}')
+    #                 break
+    #     except Exception as e:
+    #         print(f"An unexpected error occurred during role update: {e}")
 
     def receive(self, text_data):
         try:
@@ -160,7 +160,7 @@ class gameConsumer(WebsocketConsumer):
             elif message_type == 'quit':
                 self.receive_quit(text_data_json)
                 # self.sendonlinestatus(False, self.username)
-                self.remove_player()
+                # self.remove_player()
             else:
                 print(f"Received unsupported message type: {message_type}")
         except json.JSONDecodeError as e:
@@ -449,19 +449,33 @@ class gameConsumer(WebsocketConsumer):
                 player_username = player_data.get('username')
                 if player_username == username_to_remove:
                     redis_client.lrem(redis_key, 0, player)
+                    # self.remove_player(redis_key, player)
                     print(f'Removed player: {username_to_remove}')
+                    self.process_player_list(redis_key)
 
-            usernames = [json.loads(player.decode('utf-8')).get('username', '')
-                         for player in players if 'username' in json.loads(player.decode('utf-8'))]
-            num_users = len(usernames)
-            self.send(text_data=json.dumps({
-                'type': 'player_status',
-                'room_id': self.room_id,
-                'number_of_users': num_users,
-                'players': usernames
-            }))
+            # usernames = [json.loads(player.decode('utf-8')).get('username', '')
+            #              for player in players if 'username' in json.loads(player.decode('utf-8'))]
+            # num_users = len(usernames)
+            # self.send(text_data=json.dumps({
+            #     'type': 'player_status',
+            #     'room_id': self.room_id,
+            #     'number_of_users': num_users,
+            #     'players': usernames
+            # }))
         except Exception as e:
             print(f"An unexpected error occurred during player removal: {e}")
+            
+    def process_player_list(self, redis_key):
+        players = redis_client.lrange(redis_key, 0, -1)
+        usernames = [json.loads(player.decode('utf-8')).get('username', '')
+                     for player in players if 'username' in json.loads(player.decode('utf-8'))]
+        num_users = len(usernames)
+        self.send(text_data=json.dumps({
+            'type': 'player_status',
+            'room_id': self.room_id,
+            'number_of_users': num_users,
+            'players': usernames
+        }))
 
     def game_data(self, event):
         try:
