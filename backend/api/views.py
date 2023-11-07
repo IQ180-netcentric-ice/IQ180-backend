@@ -9,7 +9,10 @@ import math
 import random
 import string
 import redis
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 redis_client = redis.Redis(host="redis", port=6379, db=0)
+from django.shortcuts import render
 # redis_client = redis.Redis(host="localhost", port=6379, db=0)
 
 
@@ -120,3 +123,31 @@ def join_room(request):
     redis_client.rpush(redis_key, json.dumps(player_data))
 
     return Response(response_data, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def reset_game(request):
+    data = request.data
+    channel_layer = get_channel_layer()
+    room_id = request.data.get('room_id')
+    room_group_id = 'game_%s' % room_id
+
+    async_to_sync(channel_layer.group_send)(
+        room_group_id,
+        {
+            'type': 'game_reset',
+            'message': 'The game has been reset.'
+        }
+    )
+
+    return JsonResponse({'message': 'Game room reset successfully'})
+
+def room_list(request):
+
+    room_ids = redis_client.keys("players:*")
+    active_rooms = [room_id.decode("utf-8").split(":")[1] for room_id in room_ids]
+    
+    
+    
+
+    return render(request, 'room_list.html', {'active_rooms': active_rooms})
+

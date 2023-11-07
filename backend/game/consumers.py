@@ -643,3 +643,12 @@ class gameConsumer(WebsocketConsumer):
                 raise ValueError("'player_answer' not found in event")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
+            
+
+    def game_reset(self, event):
+        
+        self.send(text_data=json.dumps({
+            'type': 'game_reset',
+            'reset': True,
+            'message': f'The game {self.room_id} has been reset.'
+        }))

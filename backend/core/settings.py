@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'channels',
     'corsheaders',
     'game',
+    'api'
 ]
 
 MIDDLEWARE = [
