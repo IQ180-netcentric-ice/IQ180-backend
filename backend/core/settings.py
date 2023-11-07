@@ -1,7 +1,6 @@
 import os
-# from dotenv import load_dotenv
-# dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
-# load_dotenv(dotenv_path)
+from dotenv import load_dotenv
+load_dotenv()
 
 from pathlib import Path
 
@@ -19,7 +18,8 @@ SECRET_KEY = 'django-insecure-iabr8(n&hn3%tyq284*a$toc(@@#kl9u#vm+71p0@+uhn1vo$x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -78,12 +78,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        # 'NAME': os.getenv('DB_NAME'),
-        'NAME': 'test_db',
-        'USER': 'root',
-        'PASSWORD': 'root',
-        'HOST': '172.20.0.4',
-        'PORT': '5432',
+        'NAME': os.getenv('POSTGRESQL_DB'),
+        # 'NAME': 'test_db',
+        'USER': os.getenv('POSTGRESQL_AUTH'),
+        'PASSWORD': os.getenv('POSTGRESQL_AUTH'),
+        'HOST': os.getenv('POSTGRESQL_HOST'),
+        'PORT': os.getenv('POSTGRESQL_PORT'),
     }
 }
 
@@ -136,7 +136,9 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
             # 'hosts': [('127.0.0.1', 6379)],  # Use 'redis' as the host
-            'hosts': [('redis', 6379)],  # Use 'redis' as the host
+            # 'hosts': [('redis', 6379)],  # Use 'redis' as the host
+            'hosts': [(os.getenv('REDIS_HOST'), os.getenv('REDIS_PORT'))],  # Use 'redis' as the host
+            # 'hosts': [('0.tcp.ap.ngrok.io', 12707)],  # Use 'redis' as the host
         },
     },
 }

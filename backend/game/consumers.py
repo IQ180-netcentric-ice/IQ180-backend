@@ -7,10 +7,11 @@ import redis
 import uuid
 from .numberSolver import Solve, OneFromTheTop, OneOfTheOthers
 import re
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-
-# redis_client = redis.Redis(host="localhost", port=6379, db=0)
-redis_client = redis.Redis(host="redis", port=6379, db=0)
+redis_client = redis.Redis(host=os.getenv('REDIS_HOST'), port=os.getenv('REDIS_PORT'), db=0)
 
 
 class gameConsumer(WebsocketConsumer):

@@ -11,9 +11,14 @@ import string
 import redis
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-redis_client = redis.Redis(host="redis", port=6379, db=0)
+import os
+from dotenv import load_dotenv
 from django.shortcuts import render
-# redis_client = redis.Redis(host="localhost", port=6379, db=0)
+load_dotenv()
+
+
+redis_client = redis.Redis(host=os.getenv('REDIS_HOST'), port=os.getenv('REDIS_PORT'), db=0)
+
 
 
 # from asgiref.sync import sync_to_async
