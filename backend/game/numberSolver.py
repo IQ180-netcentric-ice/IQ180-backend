@@ -1,17 +1,22 @@
 import random
 
-add = lambda a, b: a + b
-sub = lambda a, b: a - b
-mul = lambda a, b: a * b
-div = lambda a, b: a / b if a % b == 0 else 0 / 0
+
+def add(a, b): return a + b
+def sub(a, b): return a - b
+def mul(a, b): return a * b
+def div(a, b): return a / b if a % b == 0 else 0 / 0
+
 
 operations = [(add, '+'), (sub, '-'), (mul, '*'), (div, '/')]
 
+
 def OneFromTheTop():
-    return [5, 10, 15][random.randint(0, 2)]
+    return [11, 27, 15][random.randint(0, 2)]
+
 
 def OneOfTheOthers():
     return random.randint(1, 10)
+
 
 def Evaluate(stack):
     try:
@@ -27,9 +32,11 @@ def Evaluate(stack):
     except:
         return 0
 
+
 def ReprStack(stack):
     reps = [str(item) if type(item) is int else item[1] for item in stack]
     return ' '.join(reps)
+
 
 def Solve(target, numbers):
     def Recurse(stack, nums):
@@ -51,6 +58,7 @@ def Solve(target, numbers):
 
             stack.pop()
     return Recurse([], numbers)
+
 
 if __name__ == "__main__":
     target = random.randint(100, 200)

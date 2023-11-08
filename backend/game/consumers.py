@@ -600,14 +600,26 @@ class gameConsumer(WebsocketConsumer):
     def generate_problem(self, curr_round):
         combined_seed = f"{self.room_id}_{curr_round}"
         random.seed(combined_seed)
+        # set_seed(combined_seed)
+        # print('consumer', combined_seed)
+        
+        def OneFromTheTop():
+            return random.choice([11, 27, 15])
+
+        def OneOfTheOthers(numbers=[]):
+            if not numbers:
+                numbers = random.sample(range(1, 11), 4)
+            return numbers.pop()
         
         target = random.randint(100, 200)
-        numbers = [OneFromTheTop()] + [OneOfTheOthers() for i in range(4)]
+        other_numbers = random.sample(range(1, 11), 4)
+        numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers) for i in range(4)]
         solution = Solve(target, numbers)
 
         while solution is None or len(solution.split()) >= 8:
             target = random.randint(100, 200)
-            numbers = [OneFromTheTop()] + [OneOfTheOthers() for i in range(4)]
+            other_numbers = random.sample(range(1, 11), 4)
+            numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers) for i in range(4)]
             solution = Solve(target, numbers)
 
         while True:
@@ -618,7 +630,7 @@ class gameConsumer(WebsocketConsumer):
             while solution and len(solution.split()) < 8:
                 target = random.randint(100, 200)
                 numbers = [OneFromTheTop()] + [OneOfTheOthers()
-                                               for i in range(4)]
+                                            for i in range(4)]
                 print(len(solution.split()))
                 print(solution)
                 solution = Solve(target, numbers)
