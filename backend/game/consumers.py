@@ -619,22 +619,18 @@ class gameConsumer(WebsocketConsumer):
             numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
                                         for i in range(4)]
             solution = Solve(target, numbers)
-            while solution is None or len(solution.split()) >= 8:
+
+            while True:
                 target = random.randint(100, 200)
                 other_numbers = random.sample(range(1, 11), 4)
                 numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
                                             for i in range(4)]
                 solution = Solve(target, numbers)
-
-            while True:
-                target = random.randint(100, 200)
-                numbers = [OneFromTheTop()] + [OneOfTheOthers()
-                                            for i in range(4)]
-                solution = Solve(target, numbers)
                 while solution and len(solution.split()) < 8:
                     target = random.randint(100, 200)
-                    numbers = [OneFromTheTop()] + [OneOfTheOthers()
-                                                   for i in range(4)]
+                    other_numbers = random.sample(range(1, 11), 4)
+                    numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
+                                                for i in range(4)]
                     print(len(solution.split()))
                     print(solution)
                     solution = Solve(target, numbers)
