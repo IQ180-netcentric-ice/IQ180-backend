@@ -11,7 +11,8 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-redis_client = redis.Redis(host=os.getenv('REDIS_HOST'), port=os.getenv('REDIS_PORT'), db=0)
+redis_client = redis.Redis(host=os.getenv(
+    'REDIS_HOST'), port=os.getenv('REDIS_PORT'), db=0)
 
 
 class gameConsumer(WebsocketConsumer):
@@ -465,7 +466,7 @@ class gameConsumer(WebsocketConsumer):
             # }))
         except Exception as e:
             print(f"An unexpected error occurred during player removal: {e}")
-            
+
     def process_player_list(self, redis_key):
         players = redis_client.lrange(redis_key, 0, -1)
         usernames = [json.loads(player.decode('utf-8')).get('username', '')
@@ -511,38 +512,92 @@ class gameConsumer(WebsocketConsumer):
 
         return hint_str
 
+    def generate_problem(self, room_id, curr_round):
+        random.seed(curr_round)
+        target = random.randint(100, 200)
+        numbers = [OneFromTheTop()] + [OneOfTheOthers() for i in range(4)]
+        solution = Solve(target, numbers)
+
+        while solution is None or len(solution.split()) >= 8:
+            target = random.randint(100, 200)
+            numbers = [OneFromTheTop()] + [OneOfTheOthers() for i in range(4)]
+            solution = Solve(target, numbers)
+
+        while True:
+            target = random.randint(100, 200)
+            numbers = [OneFromTheTop()] + [OneOfTheOthers()
+                                        for i in range(4)]
+            solution = Solve(target, numbers)
+            while solution and len(solution.split()) < 8:
+                target = random.randint(100, 200)
+                numbers = [OneFromTheTop()] + [OneOfTheOthers()
+                                            for i in range(4)]
+                print(len(solution.split()))
+                print(solution)
+                solution = Solve(target, numbers)
+            if solution is not None:
+                break
+
+        hint = self.extract_hint(str(solution))
+
+        return {
+            'room_id': room_id,
+            'curr_round': curr_round,
+            'target': target,
+            'problem': numbers,
+            'solution': solution,
+            'hint': hint
+        }
+
+    # def game_problem(self, event):
+    #     try:
+    #         if 'curr_round' in event:
+    #             curr_round = event['curr_round']
+    #             room_id = event['room_id']
+
+    #             while True:
+    #                 target = random.randint(100, 200)
+    #                 numbers = [OneFromTheTop()] + [OneOfTheOthers()
+    #                                                for i in range(4)]
+    #                 solution = Solve(target, numbers)
+    #                 while solution and len(solution.split()) < 8:
+    #                     target = random.randint(100, 200)
+    #                     numbers = [OneFromTheTop()] + [OneOfTheOthers()
+    #                                                    for i in range(4)]
+    #                     print(len(solution.split()))
+    #                     print(solution)
+    #                     solution = Solve(target, numbers)
+    #                 if solution is not None:
+    #                     break
+
+    #             # print(str(solution))
+    #             hint = self.extract_hint(str(solution))
+
+    #             self.send(text_data=json.dumps({
+    #                 'type': 'game_problem',
+    #                 'room_id': room_id,
+    #                 'curr_round': curr_round,
+    #                 'target': target,
+    #                 'problem': numbers,
+    #                 'solution': solution,
+    #                 'hint': hint
+    #             }))
+    #         else:
+    #             raise ValueError("'curr_round' not found in event")
+    #     except Exception as e:
+    #         print(f"An unexpected error occurred: {e}")
+
     def game_problem(self, event):
         try:
             if 'curr_round' in event:
                 curr_round = event['curr_round']
                 room_id = event['room_id']
 
-                while True:
-                    target = random.randint(100, 200)
-                    numbers = [OneFromTheTop()] + [OneOfTheOthers()
-                                                   for i in range(4)]
-                    solution = Solve(target, numbers)
-                    while solution and len(solution.split()) < 8:
-                        target = random.randint(100, 200)
-                        numbers = [OneFromTheTop()] + [OneOfTheOthers()
-                                                       for i in range(4)]
-                        print(len(solution.split()))
-                        print(solution)
-                        solution = Solve(target, numbers)
-                    if solution is not None:
-                        break
-
-                # print(str(solution))
-                hint = self.extract_hint(str(solution))
+                problem_data = self.generate_problem(room_id, curr_round)
 
                 self.send(text_data=json.dumps({
                     'type': 'game_problem',
-                    'room_id': room_id,
-                    'curr_round': curr_round,
-                    'target': target,
-                    'problem': numbers,
-                    'solution': solution,
-                    'hint': hint
+                    **problem_data
                 }))
             else:
                 raise ValueError("'curr_round' not found in event")
@@ -644,10 +699,9 @@ class gameConsumer(WebsocketConsumer):
                 raise ValueError("'player_answer' not found in event")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-            
 
     def game_reset(self, event):
-        
+
         self.send(text_data=json.dumps({
             'type': 'game_reset',
             'reset': True,
