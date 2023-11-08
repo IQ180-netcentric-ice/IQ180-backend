@@ -7,6 +7,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # BASE_DIR = Path(__file__).resolve().parent.parent
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# load_dotenv(os.path.join(BASE_DIR, "core", ".env"))
 
 
 # Quick-start development settings - unsuitable for production
@@ -75,15 +76,24 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('POSTGRESQL_DB'),
+#         'USER': os.getenv('POSTGRESQL_AUTH'),
+#         'PASSWORD': os.getenv('POSTGRESQL_AUTH'),
+#         'HOST': os.getenv('POSTGRESQL_HOST'),
+#         'PORT': os.getenv('POSTGRESQL_PORT'),
+#     }
+# }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRESQL_DB'),
-        # 'NAME': 'test_db',
-        'USER': os.getenv('POSTGRESQL_AUTH'),
-        'PASSWORD': os.getenv('POSTGRESQL_AUTH'),
-        'HOST': os.getenv('POSTGRESQL_HOST'),
-        'PORT': os.getenv('POSTGRESQL_PORT'),
+        'NAME': 'test_db',
+        'USER': "root",
+        'PASSWORD': "root",
+        'HOST': "172.20.0.4",
+        'PORT': "5432",
     }
 }
 

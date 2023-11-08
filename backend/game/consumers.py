@@ -15,15 +15,13 @@ redis_client = redis.Redis(host=os.getenv(
     'REDIS_HOST'), port=os.getenv('REDIS_PORT'), db=0)
 
 
-
-
 class gameConsumer(WebsocketConsumer):
     # session_seeds = {}
     # def start_game_session(self, room_id):
     #     seed = random.randint(0, 1000)
     #     self.session_seeds[room_id] = seed
     #     return seed
-    
+
     def connect(self):
         try:
             self.room_id = self.scope['url_route']['kwargs']['room_id']
@@ -329,21 +327,23 @@ class gameConsumer(WebsocketConsumer):
 
     def receive_game_problem(self, text_data):
         try:
-            text_data_json = text_data
-            if 'curr_round' in text_data_json:
-                room_id = self.room_id
-                curr_round = text_data_json['curr_round']
+            room_id = self.room_id
+            redis_key = f'players:{self.room_id}'
+            players = redis_client.lrange(redis_key, 0, -1)
+            numround = [json.loads(player.decode('utf-8')).get('numRound', '')
+                        for player in players if 'numRound' in json.loads(player.decode('utf-8'))][0]
+            timeduration = [json.loads(player.decode('utf-8')).get('time', '')
+                            for player in players if 'time' in json.loads(player.decode('utf-8'))][0]
+            async_to_sync(self.channel_layer.group_send)(
+                self.room_group_id,
+                {
+                    'type': 'game_problem',
+                    'room_id': room_id,
+                    'numRound': numround,
+                    'timeduration': timeduration
+                }
+            )
 
-                async_to_sync(self.channel_layer.group_send)(
-                    self.room_group_id,
-                    {
-                        'type': 'game_problem',
-                        'room_id': room_id,
-                        'curr_round': curr_round,
-                    }
-                )
-            else:
-                raise ValueError("'game_round' not found in JSON")
         except json.JSONDecodeError as json_error:
             print(f"JSON decoding error: {json_error}")
         except KeyError as key_error:
@@ -544,10 +544,10 @@ class gameConsumer(WebsocketConsumer):
             print(f"An unexpected error occurred: {e}")
 
     def first_round(self, event):
-        
+
         combined_seed = self.room_id
         random.seed(combined_seed)
-        
+
         num = random.randint(0, 1)
         if num == 0:
             start = False
@@ -597,56 +597,57 @@ class gameConsumer(WebsocketConsumer):
 
         return hint_str
 
-    def generate_problem(self, curr_round):
-        combined_seed = f"{self.room_id}_{curr_round}"
-        random.seed(combined_seed)
-        # set_seed(combined_seed)
-        # print('consumer', combined_seed)
-        
-        def OneFromTheTop():
-            return random.choice([11, 27, 15])
+    def generate_problem(self, numRound):
+        a = []
+        for i in (range(numRound)):
+            b = dict()
+            combined_seed = f"{self.room_id}_{i}"
+            random.seed(combined_seed)
+            # set_seed(combined_seed)
+            # print('consumer', combined_seed)
 
-        def OneOfTheOthers(numbers=[]):
-            if not numbers:
-                numbers = random.sample(range(1, 11), 4)
-            return numbers.pop()
-        
-        target = random.randint(100, 200)
-        other_numbers = random.sample(range(1, 11), 4)
-        numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers) for i in range(4)]
-        solution = Solve(target, numbers)
+            def OneFromTheTop():
+                return random.choice([11, 27, 15])
 
-        while solution is None or len(solution.split()) >= 8:
+            def OneOfTheOthers(numbers=[]):
+                if not numbers:
+                    numbers = random.sample(range(1, 11), 4)
+                return numbers.pop()
+
             target = random.randint(100, 200)
             other_numbers = random.sample(range(1, 11), 4)
-            numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers) for i in range(4)]
-            solution = Solve(target, numbers)
-
-        while True:
-            target = random.randint(100, 200)
-            numbers = [OneFromTheTop()] + [OneOfTheOthers()
+            numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
                                         for i in range(4)]
             solution = Solve(target, numbers)
-            while solution and len(solution.split()) < 8:
+            while solution is None or len(solution.split()) >= 8:
+                target = random.randint(100, 200)
+                other_numbers = random.sample(range(1, 11), 4)
+                numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
+                                            for i in range(4)]
+                solution = Solve(target, numbers)
+
+            while True:
                 target = random.randint(100, 200)
                 numbers = [OneFromTheTop()] + [OneOfTheOthers()
                                             for i in range(4)]
-                print(len(solution.split()))
-                print(solution)
                 solution = Solve(target, numbers)
-            if solution is not None:
-                break
+                while solution and len(solution.split()) < 8:
+                    target = random.randint(100, 200)
+                    numbers = [OneFromTheTop()] + [OneOfTheOthers()
+                                                   for i in range(4)]
+                    print(len(solution.split()))
+                    print(solution)
+                    solution = Solve(target, numbers)
+                if solution is not None:
+                    break
 
-        hint = self.extract_hint(str(solution))
-
-        return {
-            'room_id': self.room_id,
-            'curr_round': curr_round,
-            'target': target,
-            'problem': numbers,
-            'solution': solution,
-            'hint': hint
-        }
+            hint = self.extract_hint(str(solution))
+            b["target"] = target
+            b["problem"] = numbers
+            b["solution"] = solution
+            b["hint"] = hint
+            a += [b]
+        return a
 
     # def game_problem(self, event):
     #     try:
@@ -688,18 +689,18 @@ class gameConsumer(WebsocketConsumer):
 
     def game_problem(self, event):
         try:
-            if 'curr_round' in event:
-                curr_round = event['curr_round']
-                room_id = event['room_id']
+            numRound = event['numRound']
+            room_id = event['room_id']
+            timeduration = event['timeduration']
+            problem_data = self.generate_problem(numRound)
+            self.send(text_data=json.dumps({
+                'type': 'game_problem',
+                'room_id': room_id,
+                'timeduration': timeduration,
+                'numround': numRound,
+                'all_problem': problem_data
+            }))
 
-                problem_data = self.generate_problem(curr_round)
-
-                self.send(text_data=json.dumps({
-                    'type': 'game_problem',
-                    **problem_data
-                }))
-            else:
-                raise ValueError("'curr_round' not found in event")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
