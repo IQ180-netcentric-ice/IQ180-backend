@@ -888,7 +888,7 @@ class gameConsumer(WebsocketConsumer):
                         }))
                     else:
                         self.send(text_data=json.dumps({
-                            'type': 'game_answer',
+                            'type': 'winner_answer',
                             'room_id': room_id,
                             'curr_round': curr_round,
                             'numround': numround,
