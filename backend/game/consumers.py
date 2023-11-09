@@ -153,8 +153,8 @@ class gameConsumer(WebsocketConsumer):
                 self.receive_game_data(text_data_json)
             elif message_type == 'game_problem':
                 self.receive_game_problem(text_data_json)
-            elif message_type == 'hard_problem':
-                self.receive_hard_problem(text_data_json)
+            elif message_type == 'game_hard_problem':
+                self.receive_game_hard_problem(text_data_json)
             elif message_type == 'online_status':
                 self.receive_online_status(text_data_json)
             elif message_type == 'ready_status':
@@ -275,11 +275,18 @@ class gameConsumer(WebsocketConsumer):
     def receive_game_data(self, text_data):
         try:
             text_data_json = text_data
+            room_id = self.room_id
+            redis_key = f'players:{self.room_id}'
+            players = redis_client.lrange(redis_key, 0, -1)
+            numround = [json.loads(player.decode('utf-8')).get('numRound', '')
+                        for player in players if 'numRound' in json.loads(player.decode('utf-8'))][0]
+            timeduration = [json.loads(player.decode('utf-8')).get('time', '')
+                            for player in players if 'time' in json.loads(player.decode('utf-8'))][0]
             if 'player_data' in text_data_json:
                 room_id = self.room_id
                 player_data = text_data_json['player_data']
                 curr_round = text_data_json['curr_round']
-                time_duration = text_data_json['time_duration']
+                # time_duration = text_data_json['time_duration']
                 player_data = text_data_json['player_data']
 
                 async_to_sync(self.channel_layer.group_send)(
@@ -288,7 +295,8 @@ class gameConsumer(WebsocketConsumer):
                         'type': 'game_data',
                         'room_id': room_id,
                         'curr_round': curr_round,
-                        'time_duration': time_duration,
+                        'numround': numround,
+                        'timeduration': timeduration,
                         'player_data': player_data,
                     }
                 )
@@ -301,29 +309,29 @@ class gameConsumer(WebsocketConsumer):
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
-    def receive_hard_problem(self, text_data):
-        try:
-            text_data_json = text_data
-            if 'curr_round' in text_data_json:
-                room_id = self.room_id
-                curr_round = text_data_json['curr_round']
+    # def receive_game_hard_problem(self, text_data):
+    #     try:
+    #         text_data_json = text_data
+    #         if 'curr_round' in text_data_json:
+    #             room_id = self.room_id
+    #             curr_round = text_data_json['curr_round']
 
-                async_to_sync(self.channel_layer.group_send)(
-                    self.room_group_id,
-                    {
-                        'type': 'hard_problem',
-                        'room_id': room_id,
-                        'curr_round': curr_round,
-                    }
-                )
-            else:
-                raise ValueError("'game_round' not found in JSON")
-        except json.JSONDecodeError as json_error:
-            print(f"JSON decoding error: {json_error}")
-        except KeyError as key_error:
-            print(f"Key error: {key_error}")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+    #             async_to_sync(self.channel_layer.group_send)(
+    #                 self.room_group_id,
+    #                 {
+    #                     'type': 'game_hard_problem',
+    #                     'room_id': room_id,
+    #                     'curr_round': curr_round,
+    #                 }
+    #             )
+    #         else:
+    #             raise ValueError("'game_round' not found in JSON")
+    #     except json.JSONDecodeError as json_error:
+    #         print(f"JSON decoding error: {json_error}")
+    #     except KeyError as key_error:
+    #         print(f"Key error: {key_error}")
+    #     except Exception as e:
+    #         print(f"An unexpected error occurred: {e}")
 
     def receive_game_problem(self, text_data):
         try:
@@ -351,9 +359,42 @@ class gameConsumer(WebsocketConsumer):
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
+    def receive_game_hard_problem(self, text_data):
+        try:
+            room_id = self.room_id
+            redis_key = f'players:{self.room_id}'
+            players = redis_client.lrange(redis_key, 0, -1)
+            numround = [json.loads(player.decode('utf-8')).get('numRound', '')
+                        for player in players if 'numRound' in json.loads(player.decode('utf-8'))][0]
+            timeduration = [json.loads(player.decode('utf-8')).get('time', '')
+                            for player in players if 'time' in json.loads(player.decode('utf-8'))][0]
+            async_to_sync(self.channel_layer.group_send)(
+                self.room_group_id,
+                {
+                    'type': 'game_hard_problem',
+                    'room_id': room_id,
+                    'numRound': numround,
+                    'timeduration': timeduration
+                }
+            )
+
+        except json.JSONDecodeError as json_error:
+            print(f"JSON decoding error: {json_error}")
+        except KeyError as key_error:
+            print(f"Key error: {key_error}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
     def receive_game_answer(self, text_data):
         try:
             text_data_json = text_data
+            room_id = self.room_id
+            redis_key = f'players:{self.room_id}'
+            players = redis_client.lrange(redis_key, 0, -1)
+            numround = [json.loads(player.decode('utf-8')).get('numRound', '')
+                        for player in players if 'numRound' in json.loads(player.decode('utf-8'))][0]
+            timeduration = [json.loads(player.decode('utf-8')).get('time', '')
+                            for player in players if 'time' in json.loads(player.decode('utf-8'))][0]
             if 'curr_round' in text_data_json:
                 room_id = self.room_id
                 curr_round = text_data_json['curr_round']
@@ -366,6 +407,8 @@ class gameConsumer(WebsocketConsumer):
                         'type': 'game_answer',
                         'room_id': room_id,
                         'curr_round': curr_round,
+                        'numround': numround,
+                        "timeduration": timeduration,
                         'problem': problem,
                         'player_answer': player_answer
                     }
@@ -523,13 +566,14 @@ class gameConsumer(WebsocketConsumer):
     def game_data(self, event):
         try:
             if 'player_data' in event:
-                redis_key = f'players:{self.room_id}'
-                players = redis_client.lrange(redis_key, 0, -1)
-                numround = [json.loads(player.decode('utf-8')).get('numRound', '')
-                            for player in players if 'numRound' in json.loads(player.decode('utf-8'))][0]
+                # redis_key = f'players:{self.room_id}'
+                # players = redis_client.lrange(redis_key, 0, -1)
+                # numround = [json.loads(player.decode('utf-8')).get('numRound', '')
+                #             for player in players if 'numRound' in json.loads(player.decode('utf-8'))][0]
                 curr_round = event['curr_round']
-                time_duration = event['time_duration']
+                time_duration = event['timeduration']
                 player_data = event['player_data']
+                numround = event['numround']
                 self.send(text_data=json.dumps({
                     'type': 'game_data',
                     'room_id': self.room_id,
@@ -624,13 +668,61 @@ class gameConsumer(WebsocketConsumer):
                 target = random.randint(100, 200)
                 other_numbers = random.sample(range(4, 10), 4)
                 numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
-                                            for i in range(4)]
+                                               for i in range(4)]
                 solution = Solve(target, numbers)
                 while solution and len(solution.split()) < 8:
                     target = random.randint(100, 200)
                     other_numbers = random.sample(range(4, 10), 4)
                     numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
-                                                for i in range(4)]
+                                                   for i in range(4)]
+                    print(len(solution.split()))
+                    print(solution)
+                    solution = Solve(target, numbers)
+                if solution is not None:
+                    break
+
+            hint = self.extract_hint(str(solution))
+            b["target"] = target
+            b["problem"] = numbers
+            b["solution"] = solution
+            b["hint"] = hint
+            a += [b]
+        return a
+
+    def generate_hard_problem(self, numRound):
+        a = []
+        for i in (range(numRound)):
+            b = dict()
+            combined_seed = f"{self.room_id}_{i}"
+            random.seed(combined_seed)
+            # set_seed(combined_seed)
+            # print('consumer', combined_seed)
+
+            def OneFromTheTop():
+                return random.choice([100, 150, 200])
+
+            def OneOfTheOthers(numbers=[]):
+                if not numbers:
+                    numbers = random.sample(range(50, 100), 4)
+                return numbers.pop()
+
+            # target = random.randint(100, 200)
+            # other_numbers = random.sample(range(1, 11), 4)
+            # numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
+            #                             for i in range(4)]
+            # solution = Solve(target, numbers)
+
+            while True:
+                target = random.randint(500, 1000)
+                other_numbers = random.sample(range(50, 100), 4)
+                numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
+                                               for i in range(4)]
+                solution = Solve(target, numbers)
+                while solution and len(solution.split()) < 8:
+                    target = random.randint(500, 1000)
+                    other_numbers = random.sample(range(50, 100), 4)
+                    numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
+                                                   for i in range(4)]
                     print(len(solution.split()))
                     print(solution)
                     solution = Solve(target, numbers)
@@ -689,6 +781,23 @@ class gameConsumer(WebsocketConsumer):
             room_id = event['room_id']
             timeduration = event['timeduration']
             problem_data = self.generate_problem(numRound)
+            self.send(text_data=json.dumps({
+                'type': 'game_problem',
+                'room_id': room_id,
+                'timeduration': timeduration,
+                'numround': numRound,
+                'all_problem': problem_data
+            }))
+
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
+    def game_hard_problem(self, event):
+        try:
+            numRound = event['numRound']
+            room_id = event['room_id']
+            timeduration = event['timeduration']
+            problem_data = self.generate_hard_problem(numRound)
             self.send(text_data=json.dumps({
                 'type': 'game_problem',
                 'room_id': room_id,
@@ -759,8 +868,10 @@ class gameConsumer(WebsocketConsumer):
                 problem = event['problem']
                 time1 = player_answer['player1']['time']
                 time2 = player_answer['player2']['time']
+                numround = event['numround']
+                timeduration = event['timeduration']
 
-                if player_answer['player1']['answer'] != "" and player_answer['player2']['answer'] != "":
+                if player_answer['player1']['answer'] != "" and player_answer['player2']['answer'] != "" and player_answer['player1']["time"] != 100 and player_answer['player2']['time'] != 100:
                     winner = self.evaluate_winner_round(
                         player_answer['player1']['answer'], player_answer['player2']['answer'], problem, time1, time2)
 
@@ -769,6 +880,8 @@ class gameConsumer(WebsocketConsumer):
                             'type': 'game_answer',
                             'room_id': room_id,
                             'curr_round': curr_round,
+                            'numround': numround,
+                            'timeduration': timeduration,
                             'problem': problem,
                             'winner': 'tied',
                             'player_answer': 'tied'
@@ -778,15 +891,20 @@ class gameConsumer(WebsocketConsumer):
                             'type': 'game_answer',
                             'room_id': room_id,
                             'curr_round': curr_round,
+                            'numround': numround,
+                            'timeduration': timeduration,
                             'problem': problem,
                             'winner': player_answer[winner]['username'],
-                            'player_answer': player_answer[winner]['answer']
+                            'player_answer': player_answer[winner]['answer'],
+                            'turn': True
                         }))
                 else:
                     self.send(text_data=json.dumps({
                         'type': 'game_answer',
                         'room_id': room_id,
                         'curr_round': curr_round,
+                        'numround': numround,
+                        'timeduration': timeduration,
                         'problem': problem,
                         'player_answer': player_answer
                     }))
