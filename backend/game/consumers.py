@@ -607,28 +607,28 @@ class gameConsumer(WebsocketConsumer):
             # print('consumer', combined_seed)
 
             def OneFromTheTop():
-                return random.choice([11, 27, 15])
+                return random.choice([1, 2, 3])
 
             def OneOfTheOthers(numbers=[]):
                 if not numbers:
-                    numbers = random.sample(range(1, 11), 4)
+                    numbers = random.sample(range(4, 10), 4)
                 return numbers.pop()
 
-            target = random.randint(100, 200)
-            other_numbers = random.sample(range(1, 11), 4)
-            numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
-                                        for i in range(4)]
-            solution = Solve(target, numbers)
+            # target = random.randint(100, 200)
+            # other_numbers = random.sample(range(1, 11), 4)
+            # numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
+            #                             for i in range(4)]
+            # solution = Solve(target, numbers)
 
             while True:
                 target = random.randint(100, 200)
-                other_numbers = random.sample(range(1, 11), 4)
+                other_numbers = random.sample(range(4, 10), 4)
                 numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
                                             for i in range(4)]
                 solution = Solve(target, numbers)
                 while solution and len(solution.split()) < 8:
                     target = random.randint(100, 200)
-                    other_numbers = random.sample(range(1, 11), 4)
+                    other_numbers = random.sample(range(4, 10), 4)
                     numbers = [OneFromTheTop()] + [OneOfTheOthers(other_numbers)
                                                 for i in range(4)]
                     print(len(solution.split()))
